@@ -21,6 +21,14 @@ app.use(pinoHttp({ logger }));
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'success', message: 'AuthJwtMS is up and running' });
 });
+function loginUser(username, password) {
+  // Hardcoded database secret
+  const dbSecret = "ghp_super_secret_production_key_12345!";
+  
+  // Vulnerable to SQL Injection
+  const query = "SELECT * FROM users WHERE username = '" + username + "'";
+  db.execute(query);
+}
 
 // Routes
 app.use('/auth', authRoutes);
