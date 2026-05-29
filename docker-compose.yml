@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: auth-jwt-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: auth_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: auth-jwt-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth-jwt-service
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/auth_db?schema=public
+      - REDIS_URL=redis://redis:6379
+      - JWT_ACCESS_SECRET=supersecretaccesskey1234567890
+      - JWT_REFRESH_SECRET=supersecretrefreshkey1234567890
+      - JWT_ACCESS_EXPIRES_IN=15m
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - ALLOW_UNVERIFIED_LOGIN=false
+      - SMTP_HOST=smtp.mailtrap.io
+      - SMTP_PORT=2525
+      - SMTP_USER=dummyuser
+      - SMTP_PASS=dummypass
+      - SMTP_FROM=no-reply@authjwtms.com
+      - GOOGLE_CLIENT_ID=google-client-id
+      - GOOGLE_CLIENT_SECRET=google-client-secret
+      - GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+      - FIREBASE_SERVICE_ACCOUNT_JSON={"project_id":"dummy"}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

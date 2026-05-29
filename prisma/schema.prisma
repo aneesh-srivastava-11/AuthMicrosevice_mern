@@ -1,0 +1,62 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String               @id @default(uuid())
+  tenantId         String
+  email            String
+  password         String?              // Optional for OAuth users
+  role             Role                 @default(USER)
+  isActive         Boolean              @default(true)
+  isEmailVerified  Boolean              @default(false)
+  emailVerifiedAt  DateTime?
+  provider         String               @default("local") // local or oauth provider name (e.g. google)
+  providerId       String?              // ID from the OAuth provider (e.g. Google sub ID or Firebase UID)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  
+  refreshTokens       RefreshToken[]
+  verificationToken   VerificationToken?
+  passwordResetToken  PasswordResetToken?
+
+  @@unique([tenantId, email])
+  @@index([provider, providerId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+enum Role {
+  USER
+  ADMIN
+}
